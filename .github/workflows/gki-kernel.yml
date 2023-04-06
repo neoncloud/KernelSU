@@ -95,6 +95,11 @@ jobs:
           mkdir android-kernel && cd android-kernel
           ../git-repo/repo init --depth=1 --u https://android.googlesource.com/kernel/manifest -b common-${{ inputs.tag }}
           ../git-repo/repo sync -j$(nproc --all)
+          cd common
+          git remote add lateautumn233 https://github.com/lateautumn233/android_gki_kernel_5.10_common.git
+          git fetch lateautumn233
+          git checkout -B local_branch lateautumn233/android12-5.10-2022-04
+          cd ..
 
       - name: Setup KernelSU
         env:
