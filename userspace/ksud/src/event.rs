@@ -3,7 +3,7 @@ use log::{info, warn};
 use std::{collections::HashMap, path::Path};
 
 use crate::{
-    assets, defs, mount,
+    assets, defs, mount, restorecon,
     utils::{self, ensure_clean_dir, ensure_dir_exists},
 };
 
@@ -93,13 +93,13 @@ pub fn mount_systemlessly(module_dir: &str) -> Result<()> {
 
     // mount /system first
     if let Err(e) = mount_partition("system", &mut system_lowerdir) {
-        warn!("mount system failed: {e}");
+        warn!("mount system failed: {:#}", e);
     }
 
     // mount other partitions
     for (k, mut v) in partition_lowerdir {
         if let Err(e) = mount_partition(&k, &mut v) {
-            warn!("mount {k} failed: {e}");
+            warn!("mount {k} failed: {:#}", e);
         }
     }
 
@@ -185,9 +185,8 @@ pub fn on_post_data_fs() -> Result<()> {
     }
 
     // Finally, we should do systemless mount
-    // But we should umount all stock overlayfs and remount them after module mounted
+    // But we should backup all stock overlayfs and remount them after module mounted
     let stock_overlay = mount::StockOverlay::new();
-    stock_overlay.umount_all();
 
     // mount moduke systemlessly by overlay
     if let Err(e) = mount_systemlessly(module_dir) {
@@ -246,7 +245,7 @@ pub fn daemon() -> Result<()> {
 pub fn install() -> Result<()> {
     ensure_dir_exists(defs::ADB_DIR)?;
     std::fs::copy("/proc/self/exe", defs::DAEMON_PATH)?;
-
+    restorecon::setcon(defs::DAEMON_PATH, restorecon::ADB_CON)?;
     // install binary assets
     assets::ensure_binaries().with_context(|| "Failed to extract assets")?;
 
